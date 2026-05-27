@@ -57,7 +57,7 @@ Age-and-Gender-Detection-Using-CNN/
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Varshabachu050/Age_and_Gender_Detection_Using_CNN.git
+git clone https://github.com/Varshabachu050/CNN-based-age-and-gender-detection-system.git
 ```
 
 ---
@@ -65,7 +65,7 @@ git clone https://github.com/Varshabachu050/Age_and_Gender_Detection_Using_CNN.g
 ## 2. Open Project Folder
 
 ```bash
-cd Age_and_Gender_Detection_Using_CNN
+cd CNN-based-age-and-gender-detection-system
 ```
 
 ---
@@ -127,12 +127,15 @@ The application displays:
 
 ---
 
-# Author
-
-Developed as a beginner-friendly mini project for Computer Science Engineering students.
-
----
-
 # License
 
 This project is open-source and free to use for educational purposes.
+
+--- 
+
+# Author
+
+Developed as a beginner-friendly mini project for Computer Science Engineering students - Bachu Varsha
+
+
+
