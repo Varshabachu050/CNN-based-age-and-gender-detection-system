@@ -1,42 +1,60 @@
 # Age_and_Gender_Detection_Using_CNN
 
-A beginner-friendly Computer Vision and Deep Learning project that detects human faces from a live webcam and predicts **Age** and **Gender** in real time using pretrained deep learning models.
+A beginner-friendly Computer Vision and Deep Learning project that detects human faces and predicts **Age** and **Gender** using pretrained deep learning models.
+
+The application is built using **Python, Flask, OpenCV, InsightFace, and ONNX Runtime**. Users can either **upload an image or capture an image using their browser camera**. The detected age and gender are displayed directly on the image with bounding boxes and labels.
 
 ## Technologies Used
 
-- Python
-- OpenCV
-- InsightFace
-- ONNX Runtime
-- NumPy
+* Python
+* Flask
+* OpenCV
+* InsightFace
+* ONNX Runtime
+* NumPy
+* HTML
+* CSS
+* JavaScript
 
-The detected predictions are displayed directly on webcam frames with bounding boxes and labels.
+The detected predictions are displayed directly on the result image with bounding boxes and labels.
 
 ---
 
 # Features
 
-- Real-time webcam face detection
-- Predicts:
-  - Age
-  - Gender
-- Displays results directly on webcam frames
-- Lightweight and beginner-friendly
-- Runs on CPU (No GPU required)
-- Clean and simple code structure
-- Easy to explain during viva
+* Upload an image for detection
+* Capture an image using a browser webcam
+* Camera automatically stops after capturing
+* Detects multiple human faces
+* Predicts:
+
+  * Age
+  * Gender
+* Displays results directly on the image
+* Draws bounding boxes around detected faces
+* Displays age and gender labels
+* CPU-based processing
+* No GPU required
+* Simple and beginner-friendly
+* Clean and simple code structure
+* Easy to explain during viva
+* Can be deployed as a web application
 
 ---
 
 # Technologies Purpose
 
-| Technology | Purpose |
-|------------|----------|
-| Python | Main programming language |
-| OpenCV | Webcam handling and drawing |
-| InsightFace | Face analysis and prediction |
-| ONNX Runtime | Running pretrained ONNX models |
-| NumPy | Array and image processing |
+| Technology   | Purpose                                                    |
+| ------------ | ---------------------------------------------------------- |
+| Python       | Main programming language                                  |
+| Flask        | Creates the web application and handles requests           |
+| OpenCV       | Image processing and drawing bounding boxes                |
+| InsightFace  | Face detection, age and gender prediction                  |
+| ONNX Runtime | Runs pretrained ONNX deep learning models                  |
+| NumPy        | Image and numerical array processing                       |
+| HTML         | Creates the web page structure                             |
+| CSS          | Designs the web interface                                  |
+| JavaScript   | Handles webcam, image capture and communication with Flask |
 
 ---
 
@@ -70,42 +88,71 @@ cd CNN-based-age-and-gender-detection-system
 
 ---
 
-## 3. Install Required Libraries
+## 3. Create a Virtual Environment
 
 ```bash
-pip install insightface onnxruntime opencv-python numpy
+python -m venv .venv
+```
+
+Activate it on macOS/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+On Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+---
+
+## 4. Install Required Libraries
+
+```bash
+pip install -r requirements.txt
 ```
 
 ---
 
 # How to Run
 
-Run the Python file:
+Run the Flask application:
 
 ```bash
 python main.py
 ```
 
-The webcam will open automatically.
+The application will start locally.
 
-Press:
+The web application allows you to:
 
-```text
-Q
-```
-
-to quit the application.
+1. Upload an image
+2. Open the webcam
+3. Capture an image
+4. Detect age and gender
+5. View the detection result
 
 ---
 
 # How the Project Works
 
-1. OpenCV captures live webcam video.
-2. InsightFace detects human faces.
-3. Pretrained ONNX deep learning models predict:
-   - Age
-   - Gender
-4. Results are displayed directly on webcam frames.
+1. The user opens the web application.
+2. The user uploads an image or opens the browser webcam.
+3. The browser captures or selects the image.
+4. The image is sent to the Flask backend.
+5. Flask receives and processes the image.
+6. OpenCV prepares the image for processing.
+7. InsightFace detects human faces.
+8. The pretrained model estimates:
+
+   * Age
+   * Gender
+9. OpenCV draws bounding boxes around detected faces.
+10. Age and gender labels are added to the image.
+11. The processed image is sent back to the web page.
+12. The final detection result is displayed to the user.
 
 ---
 
@@ -113,29 +160,60 @@ to quit the application.
 
 The application displays:
 
-- Face bounding boxes
-- Predicted age
-- Predicted gender
+* Face bounding boxes
+* Predicted age
+* Predicted gender
+* Detection results for multiple faces
+
+Example:
+
+```text
+Person 1: Female, Age = 22
+Person 2: Male, Age = 25
+```
+
+The predictions are also displayed directly on the detected faces in the result image.
 
 ---
 
 # Requirements
 
-- Python 3.9+
-- Webcam
-- Internet connection (only first run for model download)
+* Python 3.9+
+* Modern web browser
+* Webcam (required only for camera capture)
+* Internet connection for the first model setup
+* CPU
+* No GPU required
 
 ---
 
-# License
+# Deployment
 
-This project is open-source and free to use for educational purposes.
+The application can be deployed as a web service using **Render**.
 
---- 
+### Build Command
+
+```bash
+pip install -r requirements.txt
+```
+
+### Start Command
+
+```bash
+gunicorn --bind 0.0.0.0:$PORT main:app
+```
+
+After deployment, the application can be accessed through the Render web URL.
+
+---
+
+# Note
+
+The predicted age and gender are **model estimates** generated by a pretrained computer vision model. They may not always be accurate and should not be considered factual information about a person.
+
+
+---
+
 
 # Author
-
-Developed as a beginner-friendly mini project for Computer Science Engineering students - Bachu Varsha
-
-
-
+**Bachu Varsha**
