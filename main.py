@@ -1,26 +1,29 @@
+import os
+import base64
+
 import cv2
 import numpy as np
-import gradio as gr
+
+from flask import Flask, request, jsonify, render_template_string
 from insightface.app import FaceAnalysis
 
 
-# ============================================================
-# AGE & GENDER DETECTION
-# InsightFace + ONNX Runtime + Gradio
-# ============================================================
+app = Flask(__name__)
 
-print("Loading Age & Gender Detection model...")
 
-# InsightFace model
-# CPUExecutionProvider makes this work on normal CPU hardware
-# and on Hugging Face CPU Spaces.
-app = FaceAnalysis(
+# ---------------------------------------------------------
+# Load model
+# ---------------------------------------------------------
+
+print("Loading age and gender model...")
+
+model = FaceAnalysis(
     name="buffalo_l",
     allowed_modules=["detection", "genderage"],
     providers=["CPUExecutionProvider"]
 )
 
-app.prepare(
+model.prepare(
     ctx_id=-1,
     det_size=(640, 640)
 )
@@ -28,259 +31,962 @@ app.prepare(
 print("Model loaded successfully.")
 
 
-def detect_age_gender(image):
-    """
-    Receives an RGB image from Gradio,
-    performs face detection and age/gender prediction,
-    and returns an annotated RGB image plus text results.
-    """
+# ---------------------------------------------------------
+# Web page
+# ---------------------------------------------------------
 
-    if image is None:
-        return None, "Please upload an image or take a photo using the webcam."
+HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Age & Gender Detection</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 30px 15px;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            text-align: center;
+            margin: 0 0 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+
+        /* -----------------------------------------------
+           SIDE-BY-SIDE FRAME
+        ------------------------------------------------ */
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .panel {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            background: #fafafa;
+        }
+
+        .panel h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+            text-align: center;
+        }
+
+
+        /* -----------------------------------------------
+           IMAGE / CAMERA FRAME
+        ------------------------------------------------ */
+
+        .media-box {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #111;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        video,
+        #preview,
+        #resultImage {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        video {
+            background: black;
+        }
+
+        .placeholder {
+            color: #aaa;
+            text-align: center;
+            padding: 20px;
+        }
+
+        canvas {
+            display: none;
+        }
+
+
+        /* -----------------------------------------------
+           UPLOAD
+        ------------------------------------------------ */
+
+        .upload-section {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: white;
+        }
+
+
+        /* -----------------------------------------------
+           BUTTONS
+        ------------------------------------------------ */
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .camera-button {
+            background: #555;
+            color: white;
+        }
+
+        .capture-button {
+            background: #777;
+            color: white;
+        }
+
+        .detect-button {
+            width: 100%;
+            background: #222;
+            color: white;
+            margin-top: 20px;
+        }
+
+
+        /* -----------------------------------------------
+           MESSAGE / RESULT
+        ------------------------------------------------ */
+
+        #message {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        #result {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f1f3f5;
+            border-radius: 8px;
+            white-space: pre-line;
+            line-height: 1.7;
+        }
+
+
+        /* -----------------------------------------------
+           MOBILE
+        ------------------------------------------------ */
+
+        @media (max-width: 800px) {
+
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <h1>Age & Gender Detection</h1>
+
+    <p class="subtitle">
+        Upload an image or capture an image using your camera.
+    </p>
+
+
+    <!-- -----------------------------------------------
+         Upload
+    ------------------------------------------------ -->
+
+    <div class="upload-section">
+
+        <label for="file">
+            Upload Image
+        </label>
+
+        <input
+            type="file"
+            id="file"
+            accept="image/*"
+            onchange="handleUpload()"
+        >
+
+    </div>
+
+
+    <!-- -----------------------------------------------
+         SIDE-BY-SIDE WORKSPACE
+    ------------------------------------------------ -->
+
+    <div class="workspace">
+
+
+        <!-- LEFT PANEL -->
+
+        <div class="panel">
+
+            <h2>
+                Input
+            </h2>
+
+            <div class="media-box">
+
+                <video
+                    id="camera"
+                    autoplay
+                    playsinline
+                ></video>
+
+                <img
+                    id="preview"
+                    alt="Input image"
+                >
+
+                <div
+                    id="inputPlaceholder"
+                    class="placeholder"
+                >
+                    Upload an image or open the camera
+                </div>
+
+            </div>
+
+
+            <div class="buttons">
+
+                <button
+                    class="camera-button"
+                    onclick="startCamera()"
+                >
+                    Open Camera
+                </button>
+
+                <button
+                    class="capture-button"
+                    onclick="captureImage()"
+                >
+                    Capture Image
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- RIGHT PANEL -->
+
+        <div class="panel">
+
+            <h2>
+                Detection Result
+            </h2>
+
+            <div class="media-box">
+
+                <img
+                    id="resultImage"
+                    alt="Detection result"
+                >
+
+                <div
+                    id="resultPlaceholder"
+                    class="placeholder"
+                >
+                    Detection result will appear here
+                </div>
+
+            </div>
+
+            <div id="result">
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- -----------------------------------------------
+         DETECT BUTTON
+    ------------------------------------------------ -->
+
+    <button
+        class="detect-button"
+        onclick="detect()"
+    >
+        Detect Age & Gender
+    </button>
+
+
+    <p id="message"></p>
+
+
+    <canvas id="canvas"></canvas>
+
+</div>
+
+
+<script>
+
+let cameraStream = null;
+let capturedImage = null;
+
+
+// ---------------------------------------------------------
+// Start Camera
+// ---------------------------------------------------------
+
+async function startCamera() {
+
+    try {
+
+        cameraStream =
+            await navigator.mediaDevices.getUserMedia({
+
+                video: {
+                    facingMode: "user",
+                    aspectRatio: 16 / 9
+                },
+
+                audio: false
+
+            });
+
+
+        const camera =
+            document.getElementById("camera");
+
+        const preview =
+            document.getElementById("preview");
+
+        const placeholder =
+            document.getElementById("inputPlaceholder");
+
+
+        camera.srcObject =
+            cameraStream;
+
+        camera.style.display =
+            "block";
+
+
+        preview.style.display =
+            "none";
+
+        placeholder.style.display =
+            "none";
+
+
+        document.getElementById("message").innerText =
+            "Camera started.";
+
+    }
+
+    catch (error) {
+
+        console.error(error);
+
+        document.getElementById("message").innerText =
+            "Camera could not be opened. Please allow camera permission.";
+
+    }
+
+}
+
+
+// ---------------------------------------------------------
+// Capture Image
+// ---------------------------------------------------------
+
+function captureImage() {
+
+    if (!cameraStream) {
+
+        alert(
+            "Please click Open Camera first."
+        );
+
+        return;
+    }
+
+
+    const camera =
+        document.getElementById("camera");
+
+    const canvas =
+        document.getElementById("canvas");
+
+    const preview =
+        document.getElementById("preview");
+
+    const placeholder =
+        document.getElementById("inputPlaceholder");
+
+
+    canvas.width =
+        camera.videoWidth;
+
+    canvas.height =
+        camera.videoHeight;
+
+
+    const context =
+        canvas.getContext("2d");
+
+
+    context.drawImage(
+        camera,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    canvas.toBlob(
+
+        function(blob) {
+
+            capturedImage =
+                blob;
+
+
+            preview.src =
+                URL.createObjectURL(blob);
+
+
+            preview.style.display =
+                "block";
+
+
+            placeholder.style.display =
+                "none";
+
+
+            // ---------------------------------------------
+            // STOP CAMERA
+            // ---------------------------------------------
+
+            cameraStream
+                .getTracks()
+                .forEach(function(track) {
+
+                    track.stop();
+
+                });
+
+
+            camera.srcObject =
+                null;
+
+
+            camera.style.display =
+                "none";
+
+
+            cameraStream =
+                null;
+
+
+            document.getElementById("message").innerText =
+                "Image captured successfully. Camera stopped.";
+
+        },
+
+        "image/jpeg",
+
+        0.95
+
+    );
+
+}
+
+
+// ---------------------------------------------------------
+// Upload Image
+// ---------------------------------------------------------
+
+function handleUpload() {
+
+    const file =
+        document.getElementById("file");
+
+
+    if (file.files.length === 0) {
+
+        return;
+
+    }
+
+
+    capturedImage =
+        null;
+
+
+    const preview =
+        document.getElementById("preview");
+
+    const camera =
+        document.getElementById("camera");
+
+    const placeholder =
+        document.getElementById("inputPlaceholder");
+
+
+    // Stop camera if it is running
+
+    if (cameraStream) {
+
+        cameraStream
+            .getTracks()
+            .forEach(function(track) {
+
+                track.stop();
+
+            });
+
+        cameraStream = null;
+
+    }
+
+
+    camera.srcObject =
+        null;
+
+    camera.style.display =
+        "none";
+
+
+    preview.src =
+        URL.createObjectURL(
+            file.files[0]
+        );
+
+
+    preview.style.display =
+        "block";
+
+
+    placeholder.style.display =
+        "none";
+
+
+    document.getElementById("message").innerText =
+        "Image selected.";
+
+}
+
+
+// ---------------------------------------------------------
+// Detect
+// ---------------------------------------------------------
+
+async function detect() {
+
+    const file =
+        document.getElementById("file");
+
+
+    const formData =
+        new FormData();
+
+
+    if (file.files.length > 0) {
+
+        formData.append(
+            "image",
+            file.files[0]
+        );
+
+    }
+
+    else if (capturedImage) {
+
+        formData.append(
+            "image",
+            capturedImage,
+            "camera.jpg"
+        );
+
+    }
+
+    else {
+
+        alert(
+            "Please upload an image or capture an image."
+        );
+
+        return;
+
+    }
+
+
+    document.getElementById("message").innerText =
+        "Detecting...";
+
+
+    document.getElementById("result").innerText =
+        "";
+
+
+    document.getElementById("resultImage").style.display =
+        "none";
+
+
+    document.getElementById("resultPlaceholder").style.display =
+        "flex";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/detect",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (data.image) {
+
+            const resultImage =
+                document.getElementById("resultImage");
+
+            const resultPlaceholder =
+                document.getElementById(
+                    "resultPlaceholder"
+                );
+
+
+            resultImage.src =
+                "data:image/jpeg;base64," +
+                data.image;
+
+
+            resultImage.style.display =
+                "block";
+
+
+            resultPlaceholder.style.display =
+                "none";
+
+        }
+
+
+        document.getElementById("result").innerText =
+            data.text;
+
+
+        document.getElementById("message").innerText =
+            "Detection completed.";
+
+    }
+
+
+    catch (error) {
+
+        console.error(error);
+
+
+        document.getElementById("message").innerText =
+            "Could not connect to the server.";
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
+"""
+
+
+# ---------------------------------------------------------
+# Home
+# ---------------------------------------------------------
+
+@app.route("/")
+def home():
+
+    return render_template_string(HTML)
+
+
+# ---------------------------------------------------------
+# Detect
+# ---------------------------------------------------------
+
+@app.route("/detect", methods=["POST"])
+def detect():
+
+    if "image" not in request.files:
+
+        return jsonify({
+            "text": "No image received."
+        }), 400
+
+
+    file = request.files["image"]
+
+    image_bytes = file.read()
+
+
+    if not image_bytes:
+
+        return jsonify({
+            "text": "Empty image."
+        }), 400
+
+
+    image_array = np.frombuffer(
+        image_bytes,
+        np.uint8
+    )
+
+
+    frame = cv2.imdecode(
+        image_array,
+        cv2.IMREAD_COLOR
+    )
+
+
+    if frame is None:
+
+        return jsonify({
+            "text": "Could not read the image."
+        }), 400
+
 
     try:
-        # Gradio provides RGB image.
-        # OpenCV/InsightFace works with BGR.
-        frame = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-        # Run InsightFace
-        faces = app.get(frame)
+        faces = model.get(frame)
 
-        result_lines = []
+        results = []
+
+
+        for index, face in enumerate(
+            faces,
+            start=1
+        ):
+
+            x1, y1, x2, y2 = (
+                face.bbox.astype(int)
+            )
+
+
+            age = int(
+                round(
+                    float(face.age)
+                )
+            )
+
+
+            if int(face.gender) == 1:
+
+                gender = "Male"
+
+            else:
+
+                gender = "Female"
+
+
+            # Draw bounding box
+
+            cv2.rectangle(
+
+                frame,
+
+                (x1, y1),
+
+                (x2, y2),
+
+                (0, 255, 0),
+
+                2
+
+            )
+
+
+            # Draw label
+
+            label = (
+                f"{gender}, Age: {age}"
+            )
+
+
+            cv2.putText(
+
+                frame,
+
+                label,
+
+                (
+                    x1,
+                    max(30, y1 - 10)
+                ),
+
+                cv2.FONT_HERSHEY_SIMPLEX,
+
+                0.7,
+
+                (0, 255, 0),
+
+                2
+
+            )
+
+
+            results.append(
+
+                f"Person {index}: "
+                f"{gender}, Age = {age}"
+
+            )
+
 
         if len(faces) == 0:
-            cv2.putText(
-                frame,
-                "No face detected",
-                (20, 45),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1.0,
-                (0, 80, 255),
-                2,
-                cv2.LINE_AA
+
+            results.append(
+                "No face detected."
             )
 
-            result_lines.append("No face detected.")
 
-        else:
-            for index, face in enumerate(faces, start=1):
+        # Encode result image
 
-                # Bounding box
-                x1, y1, x2, y2 = face.bbox.astype(int)
-
-                # Keep coordinates inside image
-                height, width = frame.shape[:2]
-
-                x1 = max(0, min(x1, width - 1))
-                y1 = max(0, min(y1, height - 1))
-                x2 = max(0, min(x2, width - 1))
-                y2 = max(0, min(y2, height - 1))
-
-                # Age
-                age = int(round(float(face.age)))
-
-                # InsightFace gender:
-                # 1 = Male
-                # 0 = Female
-                gender = "Male" if int(face.gender) == 1 else "Female"
-
-                # Colors are BGR for OpenCV
-                if gender == "Male":
-                    box_color = (255, 180, 50)
-                else:
-                    box_color = (220, 80, 200)
-
-                label = f"{gender} | Age: {age}"
-
-                # Draw bounding box
-                cv2.rectangle(
-                    frame,
-                    (x1, y1),
-                    (x2, y2),
-                    box_color,
-                    2
-                )
-
-                # Calculate label size
-                (
-                    (text_width, text_height),
-                    baseline
-                ) = cv2.getTextSize(
-                    label,
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.70,
-                    2
-                )
-
-                # Label position
-                label_top = max(
-                    0,
-                    y1 - text_height - baseline - 10
-                )
-
-                label_bottom = y1
-
-                # Draw label background
-                cv2.rectangle(
-                    frame,
-                    (x1, label_top),
-                    (x1 + text_width + 12, label_bottom),
-                    box_color,
-                    -1
-                )
-
-                # Draw label text
-                cv2.putText(
-                    frame,
-                    label,
-                    (x1 + 6, y1 - 6),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.70,
-                    (0, 0, 0),
-                    2,
-                    cv2.LINE_AA
-                )
-
-                # Add result information
-                result_lines.append(
-                    f"Face {index}: Gender = {gender}, Age = {age}"
-                )
-
-        # Convert BGR back to RGB for Gradio
-        output_image = cv2.cvtColor(
-            frame,
-            cv2.COLOR_BGR2RGB
+        success, encoded = cv2.imencode(
+            ".jpg",
+            frame
         )
 
-        result_text = "\n".join(result_lines)
 
-        return output_image, result_text
+        if not success:
+
+            return jsonify({
+                "text": "Could not create result image."
+            }), 500
+
+
+        image_base64 = base64.b64encode(
+            encoded.tobytes()
+        ).decode("utf-8")
+
+
+        return jsonify({
+
+            "image": image_base64,
+
+            "text": "\n".join(results)
+
+        })
+
 
     except Exception as error:
-        return image, f"Error during detection: {error}"
+
+        print(
+            "Detection error:",
+            error
+        )
 
 
-# ============================================================
-# GRADIO WEB INTERFACE
-# ============================================================
+        return jsonify({
 
-with gr.Blocks(
-    title="Age & Gender Detection System",
-    css="""
-    footer {
-        display: none !important;
-    }
+            "text":
+                "An error occurred during detection."
 
-    [data-testid="footer"] {
-        display: none !important;
-    }
-
-    [data-testid="settings-button"] {
-        display: none !important;
-    }
-
-    button[aria-label*="Settings"] {
-        display: none !important;
-    }
-
-    a[href*="/gradio_api/runs"] {
-        display: none !important;
-    }
-
-    a[href*="gradio.app"] {
-        display: none !important;
-    }
-    """
-) as demo:
-
-    gr.Markdown(
-        """
-        # 👤 Age & Gender Detection System
-        Upload an image or use your webcam to detect faces
-        and estimate **age and gender**.
-
-        
-        """
-    )
-
-    with gr.Row():
-
-        with gr.Column():
-
-            input_image = gr.Image(
-                label="Input Image / Webcam",
-                sources=["upload", "webcam"],
-                type="numpy"
-            )
-
-            detect_button = gr.Button(
-                "🔍 Detect Age & Gender",
-                variant="primary"
-            )
-
-        with gr.Column():
-
-            output_image = gr.Image(
-                label="Detection Result",
-                type="numpy"
-            )
-
-            output_text = gr.Textbox(
-                label="Prediction",
-                lines=5
-            )
-
-    detect_button.click(
-        fn=detect_age_gender,
-        inputs=input_image,
-        outputs=[output_image, output_text]
-    )
-
-    gr.Markdown(
-        """
-        ---
-        ### ⚠️ Note
-
-        Age and gender predictions may not always be accurate.
-
-        """
-    )
+        }), 500
 
 
-# ============================================================
-# START APPLICATION
-# ============================================================
-
+# ---------------------------------------------------------
+# Start server
+# ---------------------------------------------------------
 
 if __name__ == "__main__":
-    demo.launch(
-        css="""
-        footer {
-            display: none !important;
-        }
 
-        .gradio-container > .contain {
-            display: none !important;
-        }
+    port = int(
+        os.environ.get(
+            "PORT",
+            10000
+        )
+    )
 
-        [data-testid="footer"] {
-            display: none !important;
-        }
 
-        [data-testid="settings-button"] {
-            display: none !important;
-        }
+    app.run(
 
-        button[aria-label*="Settings"] {
-            display: none !important;
-        }
+        host="0.0.0.0",
 
-        a[href*="/gradio_api/runs"] {
-            display: none !important;
-        }
+        port=port
 
-        a[href*="gradio.app"] {
-            display: none !important;
-        }
-        """
     )
