@@ -11,9 +11,9 @@ from insightface.app import FaceAnalysis
 app = Flask(__name__)
 
 
-# ---------------------------------------------------------
-# Load model
-# ---------------------------------------------------------
+# =========================================================
+# LOAD MODEL
+# =========================================================
 
 print("Loading age and gender model...")
 
@@ -31,13 +31,14 @@ model.prepare(
 print("Model loaded successfully.")
 
 
-# ---------------------------------------------------------
-# Web page
-# ---------------------------------------------------------
+# =========================================================
+# WEB PAGE
+# =========================================================
 
 HTML = """
 <!DOCTYPE html>
 <html>
+
 <head>
 
     <title>Age & Gender Detection</title>
@@ -81,11 +82,6 @@ HTML = """
             margin-bottom: 30px;
         }
 
-
-        /* -----------------------------------------------
-           SIDE-BY-SIDE FRAME
-        ------------------------------------------------ */
-
         .workspace {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -106,17 +102,13 @@ HTML = """
             text-align: center;
         }
 
-
-        /* -----------------------------------------------
-           IMAGE / CAMERA FRAME
-        ------------------------------------------------ */
-
         .media-box {
             width: 100%;
             aspect-ratio: 16 / 9;
             background: #111;
             border-radius: 8px;
             overflow: hidden;
+
             display: flex;
             align-items: center;
             justify-content: center;
@@ -145,11 +137,6 @@ HTML = """
             display: none;
         }
 
-
-        /* -----------------------------------------------
-           UPLOAD
-        ------------------------------------------------ */
-
         .upload-section {
             margin-bottom: 20px;
         }
@@ -167,11 +154,6 @@ HTML = """
             border-radius: 6px;
             background: white;
         }
-
-
-        /* -----------------------------------------------
-           BUTTONS
-        ------------------------------------------------ */
 
         .buttons {
             display: flex;
@@ -209,11 +191,6 @@ HTML = """
             margin-top: 20px;
         }
 
-
-        /* -----------------------------------------------
-           MESSAGE / RESULT
-        ------------------------------------------------ */
-
         #message {
             text-align: center;
             margin-top: 15px;
@@ -228,11 +205,6 @@ HTML = """
             white-space: pre-line;
             line-height: 1.7;
         }
-
-
-        /* -----------------------------------------------
-           MOBILE
-        ------------------------------------------------ */
 
         @media (max-width: 800px) {
 
@@ -262,9 +234,7 @@ HTML = """
     </p>
 
 
-    <!-- -----------------------------------------------
-         Upload
-    ------------------------------------------------ -->
+    <!-- UPLOAD -->
 
     <div class="upload-section">
 
@@ -282,20 +252,16 @@ HTML = """
     </div>
 
 
-    <!-- -----------------------------------------------
-         SIDE-BY-SIDE WORKSPACE
-    ------------------------------------------------ -->
+    <!-- INPUT + RESULT -->
 
     <div class="workspace">
 
 
-        <!-- LEFT PANEL -->
+        <!-- INPUT PANEL -->
 
         <div class="panel">
 
-            <h2>
-                Input
-            </h2>
+            <h2>Input</h2>
 
             <div class="media-box">
 
@@ -341,13 +307,11 @@ HTML = """
         </div>
 
 
-        <!-- RIGHT PANEL -->
+        <!-- RESULT PANEL -->
 
         <div class="panel">
 
-            <h2>
-                Detection Result
-            </h2>
+            <h2>Detection Result</h2>
 
             <div class="media-box">
 
@@ -365,17 +329,14 @@ HTML = """
 
             </div>
 
-            <div id="result">
-            </div>
+            <div id="result"></div>
 
         </div>
 
     </div>
 
 
-    <!-- -----------------------------------------------
-         DETECT BUTTON
-    ------------------------------------------------ -->
+    <!-- DETECT BUTTON -->
 
     <button
         class="detect-button"
@@ -399,20 +360,30 @@ let cameraStream = null;
 let capturedImage = null;
 
 
-// ---------------------------------------------------------
-// Start Camera
-// ---------------------------------------------------------
+// =========================================================
+// START CAMERA
+// =========================================================
 
 async function startCamera() {
 
     try {
 
+        if (cameraStream) {
+
+            cameraStream
+                .getTracks()
+                .forEach(function(track) {
+                    track.stop();
+                });
+
+        }
+
+
         cameraStream =
             await navigator.mediaDevices.getUserMedia({
 
                 video: {
-                    facingMode: "user",
-                    aspectRatio: 16 / 9
+                    facingMode: "user"
                 },
 
                 audio: false
@@ -461,9 +432,9 @@ async function startCamera() {
 }
 
 
-// ---------------------------------------------------------
-// Capture Image
-// ---------------------------------------------------------
+// =========================================================
+// CAPTURE IMAGE
+// =========================================================
 
 function captureImage() {
 
@@ -490,6 +461,20 @@ function captureImage() {
         document.getElementById("inputPlaceholder");
 
 
+    if (
+        camera.videoWidth === 0 ||
+        camera.videoHeight === 0
+    ) {
+
+        alert(
+            "Camera is not ready yet. Please wait a moment and try again."
+        );
+
+        return;
+
+    }
+
+
     canvas.width =
         camera.videoWidth;
 
@@ -514,6 +499,16 @@ function captureImage() {
 
         function(blob) {
 
+            if (!blob) {
+
+                document.getElementById("message").innerText =
+                    "Could not capture image.";
+
+                return;
+
+            }
+
+
             capturedImage =
                 blob;
 
@@ -530,26 +525,24 @@ function captureImage() {
                 "none";
 
 
-            // ---------------------------------------------
-            // STOP CAMERA
-            // ---------------------------------------------
+            // Stop camera after capture
 
-            cameraStream
-                .getTracks()
-                .forEach(function(track) {
+            if (cameraStream) {
 
-                    track.stop();
+                cameraStream
+                    .getTracks()
+                    .forEach(function(track) {
+                        track.stop();
+                    });
 
-                });
+            }
 
 
             camera.srcObject =
                 null;
 
-
             camera.style.display =
                 "none";
-
 
             cameraStream =
                 null;
@@ -569,9 +562,9 @@ function captureImage() {
 }
 
 
-// ---------------------------------------------------------
-// Upload Image
-// ---------------------------------------------------------
+// =========================================================
+// UPLOAD IMAGE
+// =========================================================
 
 function handleUpload() {
 
@@ -580,9 +573,7 @@ function handleUpload() {
 
 
     if (file.files.length === 0) {
-
         return;
-
     }
 
 
@@ -600,19 +591,18 @@ function handleUpload() {
         document.getElementById("inputPlaceholder");
 
 
-    // Stop camera if it is running
+    // Stop camera if running
 
     if (cameraStream) {
 
         cameraStream
             .getTracks()
             .forEach(function(track) {
-
                 track.stop();
-
             });
 
-        cameraStream = null;
+        cameraStream =
+            null;
 
     }
 
@@ -644,9 +634,9 @@ function handleUpload() {
 }
 
 
-// ---------------------------------------------------------
-// Detect
-// ---------------------------------------------------------
+// =========================================================
+// DETECT
+// =========================================================
 
 async function detect() {
 
@@ -747,7 +737,7 @@ async function detect() {
 
 
         document.getElementById("result").innerText =
-            data.text;
+            data.text || "No result received.";
 
 
         document.getElementById("message").innerText =
@@ -755,11 +745,9 @@ async function detect() {
 
     }
 
-
     catch (error) {
 
         console.error(error);
-
 
         document.getElementById("message").innerText =
             "Could not connect to the server.";
@@ -771,13 +759,14 @@ async function detect() {
 </script>
 
 </body>
+
 </html>
 """
 
 
-# ---------------------------------------------------------
-# Home
-# ---------------------------------------------------------
+# =========================================================
+# HOME
+# =========================================================
 
 @app.route("/")
 def home():
@@ -785,9 +774,9 @@ def home():
     return render_template_string(HTML)
 
 
-# ---------------------------------------------------------
-# Detect
-# ---------------------------------------------------------
+# =========================================================
+# DETECTION
+# =========================================================
 
 @app.route("/detect", methods=["POST"])
 def detect():
@@ -842,10 +831,18 @@ def detect():
             start=1
         ):
 
+            # -------------------------------------------------
+            # Face coordinates
+            # -------------------------------------------------
+
             x1, y1, x2, y2 = (
                 face.bbox.astype(int)
             )
 
+
+            # -------------------------------------------------
+            # Age
+            # -------------------------------------------------
 
             age = int(
                 round(
@@ -854,33 +851,53 @@ def detect():
             )
 
 
-            if int(face.gender) == 1:
+            # -------------------------------------------------
+            # Gender
+            #
+            # InsightFace:
+            # 0 = Female
+            # 1 = Male
+            # -------------------------------------------------
 
+            raw_gender = int(face.gender)
+
+            if raw_gender == 1:
                 gender = "Male"
-
             else:
-
                 gender = "Female"
 
 
-            # Draw bounding box
+            # -------------------------------------------------
+            # Debug information
+            #
+            # This helps verify what the model actually predicts.
+            # It is printed in the terminal, not shown to users.
+            # -------------------------------------------------
 
-            cv2.rectangle(
-
-                frame,
-
-                (x1, y1),
-
-                (x2, y2),
-
-                (0, 255, 0),
-
-                2
-
+            print(
+                f"Person {index}: "
+                f"raw_gender={raw_gender}, "
+                f"predicted_gender={gender}, "
+                f"age={age}"
             )
 
 
+            # -------------------------------------------------
+            # Draw bounding box
+            # -------------------------------------------------
+
+            cv2.rectangle(
+                frame,
+                (x1, y1),
+                (x2, y2),
+                (0, 255, 0),
+                2
+            )
+
+
+            # -------------------------------------------------
             # Draw label
+            # -------------------------------------------------
 
             label = (
                 f"{gender}, Age: {age}"
@@ -888,43 +905,40 @@ def detect():
 
 
             cv2.putText(
-
                 frame,
-
                 label,
-
-                (
-                    x1,
-                    max(30, y1 - 10)
-                ),
-
+                (x1, max(30, y1 - 10)),
                 cv2.FONT_HERSHEY_SIMPLEX,
-
                 0.7,
-
                 (0, 255, 0),
-
                 2
-
             )
 
+
+            # -------------------------------------------------
+            # Result text
+            # -------------------------------------------------
 
             results.append(
-
                 f"Person {index}: "
                 f"{gender}, Age = {age}"
-
             )
 
 
-        if len(faces) == 0:
+        # -----------------------------------------------------
+        # No face
+        # -----------------------------------------------------
+
+        if not faces:
 
             results.append(
                 "No face detected."
             )
 
 
+        # -----------------------------------------------------
         # Encode result image
+        # -----------------------------------------------------
 
         success, encoded = cv2.imencode(
             ".jpg",
@@ -969,9 +983,9 @@ def detect():
         }), 500
 
 
-# ---------------------------------------------------------
-# Start server
-# ---------------------------------------------------------
+# =========================================================
+# START SERVER
+# =========================================================
 
 if __name__ == "__main__":
 
@@ -984,9 +998,7 @@ if __name__ == "__main__":
 
 
     app.run(
-
         host="0.0.0.0",
-
         port=port
-
     )
+
