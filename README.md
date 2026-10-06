@@ -6,7 +6,7 @@ The application is built using **Python, Flask, OpenCV, InsightFace, and ONNX Ru
 
 ## Live Demo
 
-https://gender-age-owoe.onrender.com
+https://cnn-based-age-and-gender-detection.onrender.com
 
 ---
 
@@ -157,17 +157,11 @@ The application is deployed using **Render**.
 ```bash
 pip install -r requirements.txt
 ```
-
 ### Start Command
 
 ```bash
 gunicorn main:app --workers 1 --threads 1 --timeout 120 --bind 0.0.0.0:$PORT
 ```
-
-### Live Application
-
-https://gender-age-owoe.onrender.com
-
 ---
 
 # Note
