@@ -1,4 +1,4 @@
-# Age_and_Gender_Detection_Using_CNN
+# CNN_based_Age_and_Gender_Detection_System
 
 A simple Computer Vision project that detects human faces and predicts **Age** and **Gender** using pretrained deep learning models.
 
