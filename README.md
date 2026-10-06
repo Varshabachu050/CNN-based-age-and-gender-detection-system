@@ -1,10 +1,16 @@
 # Age_and_Gender_Detection_Using_CNN
 
-A beginner-friendly Computer Vision and Deep Learning project that detects human faces and predicts **Age** and **Gender** using pretrained deep learning models.
+A simple Computer Vision project that detects human faces and predicts **Age** and **Gender** using pretrained deep learning models.
 
-The application is built using **Python, Flask, OpenCV, InsightFace, and ONNX Runtime**. Users can either **upload an image or capture an image using their browser camera**. The detected age and gender are displayed directly on the image with bounding boxes and labels.
+The application is built using **Python, Flask, OpenCV, InsightFace, and ONNX Runtime**. Users can either **upload an image or capture an image using their browser camera**. The detected age and gender are displayed on the result image with bounding boxes and labels.
 
-## Technologies Used
+## Live Demo
+
+https://gender-age-owoe.onrender.com
+
+---
+
+# Technologies Used
 
 * Python
 * Flask
@@ -16,8 +22,6 @@ The application is built using **Python, Flask, OpenCV, InsightFace, and ONNX Ru
 * CSS
 * JavaScript
 
-The detected predictions are displayed directly on the result image with bounding boxes and labels.
-
 ---
 
 # Features
@@ -25,49 +29,44 @@ The detected predictions are displayed directly on the result image with boundin
 * Upload an image for detection
 * Capture an image using a browser webcam
 * Camera automatically stops after capturing
-* Detects multiple human faces
-* Predicts:
-
-  * Age
-  * Gender
-* Displays results directly on the image
-* Draws bounding boxes around detected faces
+* Detects multiple faces
+* Predicts age
+* Predicts gender
+* Displays bounding boxes around detected faces
 * Displays age and gender labels
 * CPU-based processing
 * No GPU required
-* Simple and beginner-friendly
-* Clean and simple code structure
-* Easy to explain during viva
+* Simple and easy-to-understand code
 * Can be deployed as a web application
 
 ---
 
-# Technologies Purpose
+# Technologies and Their Purpose
 
-| Technology   | Purpose                                                    |
-| ------------ | ---------------------------------------------------------- |
-| Python       | Main programming language                                  |
-| Flask        | Creates the web application and handles requests           |
-| OpenCV       | Image processing and drawing bounding boxes                |
-| InsightFace  | Face detection, age and gender prediction                  |
-| ONNX Runtime | Runs pretrained ONNX deep learning models                  |
-| NumPy        | Image and numerical array processing                       |
-| HTML         | Creates the web page structure                             |
-| CSS          | Designs the web interface                                  |
-| JavaScript   | Handles webcam, image capture and communication with Flask |
+| Technology   | Purpose                                                     |
+| ------------ | ----------------------------------------------------------- |
+| Python       | Main programming language                                   |
+| Flask        | Creates the web application and handles requests            |
+| OpenCV       | Processes images and draws bounding boxes                   |
+| InsightFace  | Detects faces and predicts age and gender                   |
+| ONNX Runtime | Runs the pretrained models                                  |
+| NumPy        | Handles image and numerical data                            |
+| HTML         | Creates the web page                                        |
+| CSS          | Designs the web interface                                   |
+| JavaScript   | Handles webcam, image capture, and communication with Flask |
 
 ---
 
 # Project Structure
 
 ```text
-Age-and-Gender-Detection-Using-CNN/
+Age_and_Gender_Detection/
 │
 ├── main.py
 ├── requirements.txt
+├── .python-version
 └── README.md
 ```
-
 ---
 
 # Installation
@@ -78,15 +77,11 @@ Age-and-Gender-Detection-Using-CNN/
 git clone https://github.com/Varshabachu050/CNN-based-age-and-gender-detection-system.git
 ```
 
----
-
-## 2. Open Project Folder
+## 2. Open the Project Folder
 
 ```bash
 cd CNN-based-age-and-gender-detection-system
 ```
-
----
 
 ## 3. Create a Virtual Environment
 
@@ -94,19 +89,17 @@ cd CNN-based-age-and-gender-detection-system
 python -m venv .venv
 ```
 
-Activate it on macOS/Linux:
+### macOS / Linux
 
 ```bash
 source .venv/bin/activate
 ```
 
-On Windows:
+### Windows
 
 ```bash
 .venv\Scripts\activate
 ```
-
----
 
 ## 4. Install Required Libraries
 
@@ -118,44 +111,23 @@ pip install -r requirements.txt
 
 # How to Run
 
-Run the Flask application:
+Run the application using:
 
 ```bash
 python main.py
 ```
 
-The application will start locally.
+Open the local URL shown in the terminal.
 
-The web application allows you to:
+The application allows you to:
 
 1. Upload an image
-2. Open the webcam
+2. Open the webcam or 
 3. Capture an image
-4. Detect age and gender
-5. View the detection result
+4. Detect faces
+5. View predicted age and gender
 
 ---
-
-# How the Project Works
-
-1. The user opens the web application.
-2. The user uploads an image or opens the browser webcam.
-3. The browser captures or selects the image.
-4. The image is sent to the Flask backend.
-5. Flask receives and processes the image.
-6. OpenCV prepares the image for processing.
-7. InsightFace detects human faces.
-8. The pretrained model estimates:
-
-   * Age
-   * Gender
-9. OpenCV draws bounding boxes around detected faces.
-10. Age and gender labels are added to the image.
-11. The processed image is sent back to the web page.
-12. The final detection result is displayed to the user.
-
----
-
 # Output
 
 The application displays:
@@ -163,7 +135,7 @@ The application displays:
 * Face bounding boxes
 * Predicted age
 * Predicted gender
-* Detection results for multiple faces
+* Results for multiple detected faces
 
 Example:
 
@@ -172,24 +144,13 @@ Person 1: Female, Age = 22
 Person 2: Male, Age = 25
 ```
 
-The predictions are also displayed directly on the detected faces in the result image.
-
----
-
-# Requirements
-
-* Python 3.9+
-* Modern web browser
-* Webcam (required only for camera capture)
-* Internet connection for the first model setup
-* CPU
-* No GPU required
+The predictions are also displayed directly on the detected faces.
 
 ---
 
 # Deployment
 
-The application can be deployed as a web service using **Render**.
+The application is deployed using **Render**.
 
 ### Build Command
 
@@ -200,20 +161,22 @@ pip install -r requirements.txt
 ### Start Command
 
 ```bash
-gunicorn --bind 0.0.0.0:$PORT main:app
+gunicorn main:app --workers 1 --threads 1 --timeout 120 --bind 0.0.0.0:$PORT
 ```
 
-After deployment, the application can be accessed through the Render web URL.
+### Live Application
+
+https://gender-age-owoe.onrender.com
 
 ---
 
 # Note
 
-The predicted age and gender are **model estimates** generated by a pretrained computer vision model. They may not always be accurate and should not be considered factual information about a person.
-
+The predicted age and gender are **estimates generated by a pretrained computer vision model**. The results may not always be accurate and should not be considered factual information about a person.
 
 ---
 
-
 # Author
+
 **Bachu Varsha**
+
